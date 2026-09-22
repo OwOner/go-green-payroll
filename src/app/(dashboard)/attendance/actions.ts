@@ -1,0 +1,295 @@
+"use server"
+
+import { createClient } from "@/lib/supabase/server"
+import { revalidatePath } from "next/cache"
+
+export type AttendanceSummary = {
+  totalEmployees: number
+  present: number
+  absent: number
+  leave: number
+  totalOtHours: number
+  missingRecords: number
+}
+
+export async function fetchCurrentPayrollPeriod() {
+  const supabase = await createClient()
+  
+  // Try to find an active/draft payroll period
+  const { data: period } = await supabase
+    .from('payroll_periods')
+    .select('start_date, end_date')
+    .in('status', ['Draft', 'Open'])
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (period) {
+    return { startDate: period.start_date, endDate: period.end_date }
+  }
+
+  // Fallback to current month (1st to today, or end of month)
+  const today = new Date()
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+  
+  return { 
+    startDate: firstDay.toISOString().split('T')[0], 
+    endDate: lastDay.toISOString().split('T')[0] 
+  }
+}
+
+export async function fetchAttendanceMatrix(startDate: string, endDate: string) {
+  const supabase = await createClient()
+
+  // Fetch all active employees
+  const { data: employees } = await supabase
+    .from('employees')
+    .select('id, first_name, last_name, employee_code')
+    .eq('employment_status', 'Active')
+    .order('last_name', { ascending: true })
+
+  // Fetch attendance records in range
+  const { data: records, error } = await supabase
+    .from('attendance_records')
+    .select(`*`)
+    .gte('work_date', startDate)
+    .lte('work_date', endDate)
+
+  if (error) {
+    console.error('Error fetching attendance matrix records:', error)
+  }
+
+  return { employees: employees || [], records: records || [] }
+}
+
+export async function updateAttendanceRecord(
+  recordId: string | null,
+  payload: any,
+  reason: string
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  // --- Server-side future-date guard (Asia/Manila) ---
+  const todayManila = new Date(
+    new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' })
+  )
+  todayManila.setHours(0, 0, 0, 0)
+
+  const workDate = payload.work_date
+  if (workDate) {
+    const recordDate = new Date(workDate + 'T00:00:00')
+    if (recordDate > todayManila) {
+      return {
+        success: false,
+        error: `Attendance records cannot be created or modified for future dates (${workDate}). Only today and past dates are editable.`
+      }
+    }
+  }
+  // ---------------------------------------------------
+
+  let finalRegularHours = Number(payload.regular_hours || 0)
+  if (finalRegularHours === 0 && ['Present', 'Work From Home', 'Holiday'].includes(payload.status)) {
+    // Determine the employee's scheduled hours from their work arrangement
+    const { data: emp } = await supabase
+      .from('employees')
+      .select(`
+        positions(default_work_policy_id),
+        employee_work_policies(work_policy_id, effective_from, effective_to)
+      `)
+      .eq('id', payload.employee_id || (recordId ? (await supabase.from('attendance_records').select('employee_id').eq('id', recordId).single()).data?.employee_id : null))
+      .single()
+
+    let scheduledHours = 8.0
+    if (emp) {
+      let activePolicyId = (emp.positions as any)?.default_work_policy_id
+      if (emp.employee_work_policies && emp.employee_work_policies.length > 0) {
+        const specific = emp.employee_work_policies.find((ewp: any) => !ewp.effective_to || new Date(ewp.effective_to) >= new Date(workDate || new Date().toISOString().split('T')[0]))
+        if (specific) activePolicyId = specific.work_policy_id
+      }
+      if (activePolicyId) {
+        const { data: policy } = await supabase.from('work_policies').select('scheduled_hours_per_day').eq('id', activePolicyId).single()
+        if (policy?.scheduled_hours_per_day) {
+          scheduledHours = Number(policy.scheduled_hours_per_day)
+        }
+      }
+    }
+    finalRegularHours = scheduledHours
+  }
+
+  try {
+    if (recordId) {
+      // 1. Fetch original record
+      const { data: originalRecord } = await supabase
+        .from('attendance_records')
+        .select('*')
+        .eq('id', recordId)
+        .single()
+
+      if (!originalRecord) return { success: false, error: 'Record not found' }
+
+      // Guard against editing a record whose work_date is future
+      const existingDate = new Date((originalRecord.work_date as string) + 'T00:00:00')
+      if (existingDate > todayManila) {
+        return {
+          success: false,
+          error: `Cannot edit attendance for a future date (${originalRecord.work_date}).`
+        }
+      }
+
+      const sourceBefore = originalRecord.source
+      
+      // We do not change the 'source' column. We update last_modified_source.
+      const updateData = {
+        time_in: payload.time_in,
+        time_out: payload.time_out,
+        status: payload.status,
+        regular_hours: finalRegularHours,
+        overtime_hours: payload.overtime_hours || 0,
+        project_id: payload.project_id || null,
+        internal_notes: payload.internal_notes || null,
+        last_modified_source: 'manual_correction',
+        last_modified_by: user.id,
+        last_modified_at: new Date().toISOString()
+      }
+
+      const { error: updateError } = await supabase
+        .from('attendance_records')
+        .update(updateData)
+        .eq('id', recordId)
+
+      if (updateError) throw updateError
+
+      // 2. Insert Revision
+      const { error: revError } = await supabase
+        .from('attendance_revisions')
+        .insert({
+          attendance_record_id: recordId,
+          changed_by_user_id: user.id,
+          change_type: 'manual_correction',
+          source_before: sourceBefore,
+          source_after: 'manual_correction',
+          original_payload: originalRecord,
+          corrected_payload: updateData,
+          reason: reason
+        })
+
+      if (revError) throw revError
+
+    } else {
+      // Create new record manually
+      const insertData = {
+        employee_id: payload.employee_id,
+        work_date: payload.work_date,
+        time_in: payload.time_in,
+        time_out: payload.time_out,
+        status: payload.status,
+        regular_hours: finalRegularHours,
+        overtime_hours: payload.overtime_hours || 0,
+        project_id: payload.project_id || null,
+        internal_notes: payload.internal_notes || null,
+        source: 'manual_entry'
+      }
+
+      const { data: newRecord, error: insertError } = await supabase
+        .from('attendance_records')
+        .insert(insertData)
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+      
+      // Revision for new manual entry isn't strictly required, 
+      // but we can add one or just rely on the 'source' = manual_entry.
+    }
+
+    revalidatePath('/attendance')
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function bulkImportAttendance(records: { employee_id: string, work_date: string, status: string, notes: string }[]) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: 'Unauthorized' }
+
+  // Ensure no future dates
+  const todayManila = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila' }))
+  todayManila.setHours(0, 0, 0, 0)
+
+  for (const r of records) {
+    const recordDate = new Date(r.work_date + 'T00:00:00')
+    if (recordDate > todayManila) {
+      return { success: false, error: `Cannot import future date: ${r.work_date}` }
+    }
+  }
+
+  // Double check conflicts to enforce "no overwrite"
+  const employeeIds = [...new Set(records.map(r => r.employee_id))]
+  const dates = [...new Set(records.map(r => r.work_date))]
+
+  if (employeeIds.length === 0 || dates.length === 0) {
+    return { success: true, insertedCount: 0 }
+  }
+
+  const { data: existing } = await supabase
+    .from('attendance_records')
+    .select('employee_id, work_date')
+    .in('employee_id', employeeIds)
+    .in('work_date', dates)
+
+  const existingSet = new Set(existing?.map(e => `${e.employee_id}_${e.work_date}`) || [])
+
+  const toInsert = []
+  for (const r of records) {
+    if (!existingSet.has(`${r.employee_id}_${r.work_date}`)) {
+      toInsert.push({
+        employee_id: r.employee_id,
+        work_date: r.work_date,
+        status: r.status,
+        regular_hours: r.status === 'Present' ? 8 : 0,
+        internal_notes: r.notes || null,
+        source: 'excel_import'
+      })
+    }
+  }
+
+  if (toInsert.length > 0) {
+    const { error } = await supabase.from('attendance_records').insert(toInsert)
+    if (error) return { success: false, error: error.message }
+  }
+
+  revalidatePath('/attendance')
+  return { success: true, insertedCount: toInsert.length }
+}
+
+export async function previewAttendanceImport(records: { employee_id: string, work_date: string, status: string, notes: string }[]) {
+  const supabase = await createClient()
+
+  // Double check conflicts to enforce "no overwrite"
+  const employeeIds = [...new Set(records.map(r => r.employee_id))]
+  const dates = [...new Set(records.map(r => r.work_date))]
+
+  if (employeeIds.length === 0 || dates.length === 0) {
+    return { success: true, conflicts: [] }
+  }
+
+  const { data: existing } = await supabase
+    .from('attendance_records')
+    .select('employee_id, work_date')
+    .in('employee_id', employeeIds)
+    .in('work_date', dates)
+
+  const existingSet = new Set(existing?.map(e => `${e.employee_id}_${e.work_date}`) || [])
+
+  const conflicts = records.filter(r => existingSet.has(`${r.employee_id}_${r.work_date}`))
+                           .map(r => `${r.employee_id}_${r.work_date}`)
+
+  return { success: true, conflicts }
+}
