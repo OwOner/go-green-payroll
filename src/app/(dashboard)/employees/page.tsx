@@ -18,7 +18,7 @@ export default async function EmployeesPage() {
       *,
       departments(name),
       positions(title),
-      employee_compensation_history(id, effective_to)
+      employee_compensation_history(id, effective_to, rate_type, amount)
     `)
     .order('last_name', { ascending: true })
 
@@ -83,7 +83,7 @@ export default async function EmployeesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {emp.employee_compensation_history && emp.employee_compensation_history.some((c: any) => !c.effective_to || new Date(c.effective_to) > new Date()) ? (
+                      {emp.employee_compensation_history && emp.employee_compensation_history.some((c: any) => (!c.effective_to || new Date(c.effective_to) > new Date()) && c.rate_type && !isNaN(Number(c.amount)) && Number(c.amount) > 0) ? (
                         <div className="flex items-center text-green-600 text-sm">
                           <span className="mr-1">✓</span> Salary Set
                         </div>
