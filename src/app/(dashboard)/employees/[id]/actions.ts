@@ -67,6 +67,7 @@ export async function addCompensationHistory(formData: FormData) {
       }
       
       revalidatePath(`/employees/${employee_id}`)
+      revalidatePath('/employees')
       return { success: true }
     }
 
@@ -101,6 +102,7 @@ export async function addCompensationHistory(formData: FormData) {
   }
 
   revalidatePath(`/employees/${employee_id}`)
+  revalidatePath('/employees')
   return { success: true }
 }
 

@@ -83,7 +83,10 @@ export default async function EmployeesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {emp.employee_compensation_history && emp.employee_compensation_history.some((c: any) => (!c.effective_to || new Date(c.effective_to) > new Date()) && c.rate_type && !isNaN(Number(c.amount)) && Number(c.amount) > 0) ? (
+                      {(() => {
+                        const activeComp = emp.employee_compensation_history?.find((c: any) => !c.effective_to);
+                        return activeComp && activeComp.rate_type && !isNaN(Number(activeComp.amount)) && Number(activeComp.amount) > 0;
+                      })() ? (
                         <div className="flex items-center text-green-600 text-sm">
                           <span className="mr-1">✓</span> Salary Set
                         </div>
