@@ -196,10 +196,10 @@ export default async function EmployeeProfilePage({ params }: { params: Promise<
                     <div className="font-medium text-foreground tabular-nums">
                       {activeCompensation ? (
                         <>
-                          {activeCompensation.salary_basis === 'Daily' && activeCompensation.daily_rate ? `₱${Number(activeCompensation.daily_rate).toLocaleString()}/day` : ''}
-                          {activeCompensation.salary_basis === 'Weekly' && activeCompensation.weekly_rate ? `₱${Number(activeCompensation.weekly_rate).toLocaleString()}/wk` : ''}
-                          {activeCompensation.salary_basis === 'Hourly' && activeCompensation.hourly_rate ? `₱${Number(activeCompensation.hourly_rate).toLocaleString()}/hr` : ''}
-                          {(activeCompensation.salary_basis === 'Monthly' || !activeCompensation.salary_basis) ? `₱${Number(activeCompensation.basic_salary).toLocaleString()}/mo` : ''}
+                          {(activeCompensation.rate_type || '').toLowerCase() === 'daily' ? `₱${Number(activeCompensation.amount).toLocaleString()}/day` : ''}
+                          {(activeCompensation.rate_type || '').toLowerCase() === 'weekly' ? `₱${Number(activeCompensation.amount).toLocaleString()}/wk` : ''}
+                          {(activeCompensation.rate_type || '').toLowerCase() === 'hourly' ? `₱${Number(activeCompensation.amount).toLocaleString()}/hr` : ''}
+                          {((activeCompensation.rate_type || '').toLowerCase() === 'monthly' || !activeCompensation.rate_type) ? `₱${Number(activeCompensation.amount).toLocaleString()}/mo` : ''}
                         </>
                       ) : (
                         <span className="text-muted-foreground italic">Not set</span>
@@ -246,9 +246,9 @@ export default async function EmployeeProfilePage({ params }: { params: Promise<
                     compensationHistory.sort((a: any, b: any) => new Date(b.effective_from).getTime() - new Date(a.effective_from).getTime()).map((comp: any) => (
                       <TableRow key={comp.id} className="hover:bg-paper">
                         <TableCell>
-                          {comp.salary_basis ? (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-paper text-foreground border border-border">
-                              {comp.salary_basis}
+                          {comp.rate_type ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-paper text-foreground border border-border capitalize">
+                              {comp.rate_type}
                             </span>
                           ) : (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-sm text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
@@ -257,10 +257,10 @@ export default async function EmployeeProfilePage({ params }: { params: Promise<
                           )}
                         </TableCell>
                         <TableCell className="text-right font-semibold text-foreground tabular-nums">
-                          {comp.salary_basis === 'Daily'   && comp.daily_rate   ? `₱${Number(comp.daily_rate).toLocaleString()}/day` : ''}
-                          {comp.salary_basis === 'Weekly'  && comp.weekly_rate  ? `₱${Number(comp.weekly_rate).toLocaleString()}/wk` : ''}
-                          {comp.salary_basis === 'Hourly'  && comp.hourly_rate  ? `₱${Number(comp.hourly_rate).toLocaleString()}/hr` : ''}
-                          {(comp.salary_basis === 'Monthly' || !comp.salary_basis) ? `₱${Number(comp.basic_salary).toLocaleString()}/mo` : ''}
+                          {(comp.rate_type || '').toLowerCase() === 'daily' ? `₱${Number(comp.amount).toLocaleString()}/day` : ''}
+                          {(comp.rate_type || '').toLowerCase() === 'weekly' ? `₱${Number(comp.amount).toLocaleString()}/wk` : ''}
+                          {(comp.rate_type || '').toLowerCase() === 'hourly' ? `₱${Number(comp.amount).toLocaleString()}/hr` : ''}
+                          {((comp.rate_type || '').toLowerCase() === 'monthly' || !comp.rate_type) ? `₱${Number(comp.amount).toLocaleString()}/mo` : ''}
                         </TableCell>
                         <TableCell>{comp.pay_frequency}</TableCell>
                         <TableCell className="pl-6 font-medium text-foreground tabular-nums">{new Date(comp.effective_from).toLocaleDateString()}</TableCell>

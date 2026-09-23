@@ -57,8 +57,6 @@ export async function addCompensationHistory(formData: FormData) {
       const { error: updateSameDayError } = await supabase
         .from('employee_compensation_history')
         .update({
-          salary_basis,
-          salary_type: salary_basis,
           pay_frequency,
           ...rateColumns[salary_basis]
         })
@@ -91,8 +89,6 @@ export async function addCompensationHistory(formData: FormData) {
     .from('employee_compensation_history')
     .insert({
       employee_id,
-      salary_basis,
-      salary_type: salary_basis,  // keep in sync for backward compat
       pay_frequency,
       effective_from,
       working_hours_per_day: 8,

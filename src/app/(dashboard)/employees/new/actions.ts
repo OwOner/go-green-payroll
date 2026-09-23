@@ -171,18 +171,16 @@ export async function createEmployee(formData: FormData) {
   if (salaryBasis && rate && parseFloat(rate) > 0) {
     const rateVal = parseFloat(rate)
     const rateColumns: Record<string, object> = {
-      Monthly: { basic_salary: rateVal },
-      Daily: { basic_salary: rateVal, daily_rate: rateVal },
-      Weekly: { basic_salary: rateVal, weekly_rate: rateVal },
-      Hourly: { basic_salary: rateVal, hourly_rate: rateVal },
+      Monthly: { rate_type: 'Monthly', amount: rateVal },
+      Daily: { rate_type: 'Daily', amount: rateVal },
+      Weekly: { rate_type: 'Weekly', amount: rateVal },
+      Hourly: { rate_type: 'Hourly', amount: rateVal },
     }
 
     const { error: compError } = await supabase
       .from('employee_compensation_history')
       .insert({
         employee_id: employeeId,
-        salary_basis: salaryBasis,
-        salary_type: salaryBasis,
         pay_frequency: payFrequency || 'Semi-Monthly',
         effective_from: newEmployee.date_hired,
         reason: 'Initial setup on hire',
