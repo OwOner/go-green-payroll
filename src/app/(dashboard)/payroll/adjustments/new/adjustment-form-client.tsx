@@ -115,9 +115,7 @@ export default function AdjustmentFormClient({
                 required
                 className="w-full p-2.5 border border-slate-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               >
-                <option value="Hours Correction">Hours Correction</option>
                 <option value="Missed Earning">Missed Earning</option>
-                <option value="Statutory Correction">Statutory Correction</option>
                 <option value="Loan Correction">Loan Correction</option>
                 <option value="Other">Other</option>
               </select>

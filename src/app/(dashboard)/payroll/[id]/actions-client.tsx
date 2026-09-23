@@ -15,7 +15,6 @@ export default function PayrollActions({ runId, status }: { runId: string, statu
   const [showOverride, setShowOverride] = useState(false)
   const router = useRouter()
   const { toast } = useToast()
-  void router
   
   async function handleApproveAttempt() {
     setLoading(true)
@@ -23,10 +22,11 @@ export default function PayrollActions({ runId, status }: { runId: string, statu
     setLoading(false)
 
     if (diagnostics.hasBlockingErrors) {
+      const errorMessages = diagnostics.errors.map(e => `${e.employeeName || 'System'}: ${e.message}`).join("\n")
       toast({
         variant: "destructive",
         title: "Cannot approve payroll",
-        description: "Blocking errors detected. Please review the Diagnostics tab."
+        description: `Blocking errors detected:\n${errorMessages}`
       })
       return
     }
@@ -43,6 +43,7 @@ export default function PayrollActions({ runId, status }: { runId: string, statu
       toast({ variant: "destructive", title: "Error", description: result.error })
     } else {
       toast({ title: "Success", description: "Payroll run approved successfully." })
+      router.refresh()
     }
     setLoading(false)
   }
@@ -56,6 +57,7 @@ export default function PayrollActions({ runId, status }: { runId: string, statu
       toast({ variant: "destructive", title: "Error", description: result.error })
     } else {
       toast({ title: "Success", description: "Payroll run approved with overrides." })
+      router.refresh()
     }
     setLoading(false)
     setShowOverride(false)
@@ -68,6 +70,7 @@ export default function PayrollActions({ runId, status }: { runId: string, statu
     await rejectPayrollRun(runId, data.get('reason') as string)
     setLoading(false)
     setShowReject(false)
+    router.refresh()
   }
 
   const [showPaid, setShowPaid] = useState(false)
@@ -77,9 +80,15 @@ export default function PayrollActions({ runId, status }: { runId: string, statu
     setLoading(true)
     const data = new FormData(e.currentTarget)
     const ref = data.get('reference') as string
-    await markPayrollPaid(runId, ref)
+    const result = await markPayrollPaid(runId, ref)
+    if (result.error) {
+      toast({ variant: "destructive", title: "Error", description: result.error })
+    } else {
+      toast({ title: "Success", description: "Payroll marked as paid." })
+    }
     setLoading(false)
     setShowPaid(false)
+    router.refresh()
   }
 
   if (status === 'Approved') {
@@ -236,6 +245,7 @@ export default function PayrollActions({ runId, status }: { runId: string, statu
               toast({ variant: "destructive", title: "Error", description: result.error })
             } else {
               toast({ title: "Success", description: "Payroll submitted for approval." })
+              router.refresh()
             }
             setLoading(false)
           }}

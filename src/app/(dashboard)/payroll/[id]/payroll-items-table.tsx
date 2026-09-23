@@ -3,13 +3,37 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { FileText, Eye, ChevronLeft, ChevronRight } from "lucide-react"
+import { FileText, Eye, ChevronLeft, ChevronRight, Plus } from "lucide-react"
 import Link from "next/link"
 import PayrollItemExclusionAction from "./item-exclusion-action"
+import { addRunDeduction } from "./override-actions"
+import { useToast } from "@/hooks/use-toast"
 
 export default function PayrollItemsTable({ items, runId }: { items: any[], runId: string }) {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+  const { toast } = useToast()
+
+  const [addingDeductionFor, setAddingDeductionFor] = useState<string | null>(null)
+  const [deductionDesc, setDeductionDesc] = useState("")
+  const [deductionAmt, setDeductionAmt] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleAddDeduction = async (e: React.FormEvent, itemId: string) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+    const amt = parseFloat(deductionAmt)
+    const result = await addRunDeduction(itemId, runId, deductionDesc, amt)
+    if (result.success) {
+      toast({ title: "Success", description: "Manual deduction added." })
+      setAddingDeductionFor(null)
+      setDeductionDesc("")
+      setDeductionAmt("")
+    } else {
+      toast({ title: "Error", description: result.error || "Failed to add deduction.", variant: "destructive" })
+    }
+    setIsSubmitting(false)
+  }
 
   const totalPages = Math.ceil((items?.length || 0) / itemsPerPage)
   
@@ -60,7 +84,7 @@ export default function PayrollItemsTable({ items, runId }: { items: any[], runI
                         </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-500 mt-1">{(item.employees as any)?.employee_code}</div>
+                    <div className="text-xs text-slate-500 mt-1 font-mono">{(item.employees as any)?.employee_code}</div>
                     {item.is_excluded && item.exclusion_reason && (
                       <div className="text-xs text-slate-500 mt-1 italic">Reason: {item.exclusion_reason}</div>
                     )}
@@ -92,25 +116,85 @@ export default function PayrollItemsTable({ items, runId }: { items: any[], runI
                         <div className="mt-4 space-y-4">
                           <div className="bg-slate-50 rounded-lg p-4 border border-slate-100 text-sm">
                             <h4 className="font-semibold text-slate-700 mb-2">Earnings</h4>
-                            {item.earnings_breakdown && Object.entries(item.earnings_breakdown).map(([k, v]) => (
-                              <div key={k} className="flex justify-between py-1 border-b border-slate-100 last:border-0">
-                                <span className="text-slate-600 capitalize">{k.replace(/_/g, ' ')}</span>
-                                <span className="font-medium">{Number(v).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            <div className="flex justify-between py-1 border-b border-slate-100 last:border-0">
+                              <span className="text-slate-600 capitalize">Basic Pay</span>
+                              <span className="font-medium">{Number(item.basic_pay).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                            </div>
+                            {item.payroll_earnings?.map((e: any) => (
+                              <div key={e.id} className="flex justify-between py-1 border-b border-slate-100 last:border-0">
+                                <span className="text-slate-600 capitalize">{e.description || e.source}</span>
+                                <span className="font-medium">{Number(e.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                               </div>
                             ))}
                           </div>
                           
                           <div className="bg-red-50 rounded-lg p-4 border border-red-100 text-sm">
                             <h4 className="font-semibold text-red-700 mb-2">Deductions</h4>
-                            {(!item.deductions_breakdown || Object.keys(item.deductions_breakdown).length === 0) ? (
+                            {(!item.payroll_deductions || item.payroll_deductions.length === 0) ? (
                               <p className="text-red-500 italic">No deductions for this period.</p>
                             ) : (
-                              Object.entries(item.deductions_breakdown).map(([k, v]) => (
-                                <div key={k} className="flex justify-between py-1 border-b border-red-100 last:border-0">
-                                  <span className="text-red-600 capitalize">{k.replace(/_/g, ' ')}</span>
-                                  <span className="font-medium text-red-700">{Number(v).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                              item.payroll_deductions.map((d: any) => (
+                                <div key={d.id} className="flex items-center justify-between py-1 border-b border-red-100 last:border-0">
+                                  <div className="flex flex-col">
+                                    <span className="text-red-600 capitalize">{d.description || d.source}</span>
+                                    {d.source === "Manual" && <span className="text-[10px] text-red-400">Manual Deduction</span>}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-red-700">{Number(d.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                                    {d.source === "Manual" && item.payroll_runs?.status === "Draft" && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-100"
+                                        onClick={async () => {
+                                          const { removeRunDeduction } = await import('./override-actions');
+                                          await removeRunDeduction(d.id, item.id, runId);
+                                        }}
+                                        title="Remove deduction"
+                                      >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                               ))
+                            )}
+                            
+                            {item.payroll_runs?.status === "Draft" && (
+                              <div className="mt-4 pt-4 border-t border-red-100">
+                                {addingDeductionFor === item.id ? (
+                                  <form onSubmit={(e) => handleAddDeduction(e, item.id)} className="space-y-3">
+                                    <div className="flex gap-2">
+                                      <input 
+                                        type="text"
+                                        placeholder="Description"
+                                        value={deductionDesc}
+                                        onChange={e => setDeductionDesc(e.target.value)}
+                                        className="w-full text-sm p-2 border border-slate-200 rounded"
+                                        required
+                                      />
+                                      <input 
+                                        type="number"
+                                        placeholder="Amount"
+                                        min="0.01"
+                                        step="0.01"
+                                        value={deductionAmt}
+                                        onChange={e => setDeductionAmt(e.target.value)}
+                                        className="w-32 text-sm p-2 border border-slate-200 rounded"
+                                        required
+                                      />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                      <Button type="button" variant="ghost" size="sm" onClick={() => setAddingDeductionFor(null)}>Cancel</Button>
+                                      <Button type="submit" size="sm" disabled={isSubmitting}>Save</Button>
+                                    </div>
+                                  </form>
+                                ) : (
+                                  <Button variant="outline" size="sm" className="w-full border-dashed" onClick={() => setAddingDeductionFor(item.id)}>
+                                    <Plus className="w-4 h-4 mr-2" /> Add Manual Deduction
+                                  </Button>
+                                )}
+                              </div>
                             )}
                           </div>
                           

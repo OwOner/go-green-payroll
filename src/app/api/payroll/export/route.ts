@@ -144,7 +144,7 @@ export async function GET(request: Request) {
     }
 
     const totalDeductions = Number(item.total_deductions)
-    const grossPay = Number(item.gross_pay)
+    const grossPay = Number(item.basic_pay)
     const netPay = Number(item.net_pay)
 
     // Accumulate totals

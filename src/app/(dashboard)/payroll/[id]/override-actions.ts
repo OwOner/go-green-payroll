@@ -67,7 +67,8 @@ export async function overridePayrollEarning(
     return { success: false, error: "Failed to recalculate totals: " + earningsErr.message }
   }
 
-  const newGrossPay = (allEarnings || []).reduce(
+  const { data: pItem } = await supabase.from("payroll_items").select("basic_pay").eq("id", earning.payroll_item_id).single()
+  const newGrossPay = Number(pItem?.basic_pay || 0) + (allEarnings || []).reduce(
     (sum, e) => sum + Number(e.amount),
     0
   )
@@ -88,7 +89,6 @@ export async function overridePayrollEarning(
   const { error: itemUpdateErr } = await supabase
     .from("payroll_items")
     .update({
-      gross_pay: newGrossPay,
       net_pay: newNetPay,
     })
     .eq("id", earning.payroll_item_id)
@@ -144,7 +144,8 @@ export async function revertPayrollEarningOverride(earningId: string, payrollRun
     .select("amount")
     .eq("payroll_item_id", earning.payroll_item_id)
 
-  const newGrossPay = (allEarnings || []).reduce((sum, e) => sum + Number(e.amount), 0)
+  const { data: pItem } = await supabase.from("payroll_items").select("basic_pay").eq("id", earning.payroll_item_id).single()
+  const newGrossPay = Number(pItem?.basic_pay || 0) + (allEarnings || []).reduce((sum, e) => sum + Number(e.amount), 0)
 
   const { data: allDeductions } = await supabase
     .from("payroll_deductions")
@@ -155,7 +156,7 @@ export async function revertPayrollEarningOverride(earningId: string, payrollRun
 
   await supabase
     .from("payroll_items")
-    .update({ gross_pay: newGrossPay, net_pay: newGrossPay - totalDeductions })
+    .update({ net_pay: newGrossPay - totalDeductions })
     .eq("id", earning.payroll_item_id)
 
   revalidatePath(`/payroll/${payrollRunId}`)
@@ -196,7 +197,8 @@ export async function addRunDeduction(
     .select("amount")
     .eq("payroll_item_id", payrollItemId)
 
-  const newGrossPay = (allEarnings || []).reduce((sum, e) => sum + Number(e.amount), 0)
+  const { data: pItem } = await supabase.from("payroll_items").select("basic_pay").eq("id", payrollItemId).single()
+  const newGrossPay = Number(pItem?.basic_pay || 0) + (allEarnings || []).reduce((sum, e) => sum + Number(e.amount), 0)
 
   const { data: allDeductions } = await supabase
     .from("payroll_deductions")
@@ -251,7 +253,8 @@ export async function addRunBonus(
     .select("amount")
     .eq("payroll_item_id", payrollItemId)
 
-  const newGrossPay = (allEarnings || []).reduce((sum, e) => sum + Number(e.amount), 0)
+  const { data: pItem } = await supabase.from("payroll_items").select("basic_pay").eq("id", payrollItemId).single()
+  const newGrossPay = Number(pItem?.basic_pay || 0) + (allEarnings || []).reduce((sum, e) => sum + Number(e.amount), 0)
 
   const { data: allDeductions } = await supabase
     .from("payroll_deductions")
@@ -263,7 +266,55 @@ export async function addRunBonus(
   await supabase
     .from("payroll_items")
     .update({ 
-      gross_pay: newGrossPay, 
+      net_pay: newGrossPay - totalDeductions 
+    })
+    .eq("id", payrollItemId)
+
+  revalidatePath(`/payroll/${payrollRunId}`)
+  return { success: true }
+}
+
+/**
+ * Remove a manual deduction from a payroll item.
+ */
+export async function removeRunDeduction(
+  deductionId: string,
+  payrollItemId: string,
+  payrollRunId: string
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) return { success: false, error: "Unauthorized" }
+
+  // 1. Delete the deduction
+  const { error: deleteErr } = await supabase
+    .from("payroll_deductions")
+    .delete()
+    .eq("id", deductionId)
+
+  if (deleteErr) return { success: false, error: deleteErr.message }
+
+  // 2. Recalculate totals
+  const { data: allEarnings } = await supabase
+    .from("payroll_earnings")
+    .select("amount")
+    .eq("payroll_item_id", payrollItemId)
+
+  const { data: pItem } = await supabase.from("payroll_items").select("basic_pay").eq("id", payrollItemId).single()
+  const newGrossPay = Number(pItem?.basic_pay || 0) + (allEarnings || []).reduce((sum, e) => sum + Number(e.amount), 0)
+
+  const { data: allDeductions } = await supabase
+    .from("payroll_deductions")
+    .select("amount")
+    .eq("payroll_item_id", payrollItemId)
+
+  const totalDeductions = (allDeductions || []).reduce((sum, d) => sum + Number(d.amount), 0)
+
+  await supabase
+    .from("payroll_items")
+    .update({ 
+      total_deductions: totalDeductions, 
       net_pay: newGrossPay - totalDeductions 
     })
     .eq("id", payrollItemId)

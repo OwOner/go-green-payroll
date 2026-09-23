@@ -34,7 +34,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   let query = supabase
     .from('payroll_items')
     .select(`
-      gross_pay,
+      basic_pay,
       net_pay,
       total_deductions,
       payroll_runs!inner(id, payroll_period_id)
@@ -53,7 +53,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   let totalDeductions = 0
   
   items?.forEach(i => {
-    totalGross += Number(i.gross_pay || 0)
+    totalGross += Number(i.basic_pay || 0)
     totalNet += Number(i.net_pay || 0)
     totalDeductions += Number(i.total_deductions || 0)
   })

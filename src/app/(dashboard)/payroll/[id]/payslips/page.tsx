@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
+import { PayslipPrintButton } from "@/components/ui/payslip-print-button"
 
 export default async function PayslipsPrintPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -23,7 +24,7 @@ export default async function PayslipsPrintPage({ params }: { params: Promise<{ 
     .from('payroll_items')
     .select(`
       id,
-      gross_pay,
+      basic_pay,
       net_pay,
       total_deductions,
       employees ( first_name, last_name, employee_code, departments(name), positions(title) ),
@@ -49,18 +50,11 @@ export default async function PayslipsPrintPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="bg-white min-h-screen font-mono text-sm text-black p-4 print:p-0">
+    <div className="bg-white min-h-screen font-sans tabular-nums text-ink p-4 print:p-0">
       <div className="max-w-4xl mx-auto space-y-8 print:space-y-0">
         <div className="mb-4 print:hidden flex justify-between items-center bg-slate-100 p-4 rounded-lg">
           <p className="text-slate-600">Print this page to generate payslip PDFs.</p>
-          <button 
-            onClick={() => {
-              if (typeof window !== 'undefined') window.print()
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
-          >
-            Print Payslips
-          </button>
+          <PayslipPrintButton />
         </div>
 
         {chunks.map((chunk, pageIndex) => (
@@ -80,7 +74,7 @@ export default async function PayslipsPrintPage({ params }: { params: Promise<{ 
                   <div className="grid grid-cols-2 gap-4 mb-6 text-xs">
                     <div>
                       <div className="flex"><span className="w-24 font-bold">Employee:</span> <span>{emp.last_name}, {emp.first_name}</span></div>
-                      <div className="flex"><span className="w-24 font-bold">ID Number:</span> <span>{emp.employee_code}</span></div>
+                      <div className="flex"><span className="w-24 font-bold">ID Number:</span> <span className="font-mono">{emp.employee_code}</span></div>
                       <div className="flex"><span className="w-24 font-bold">Department:</span> <span>{emp.departments?.name || '-'}</span></div>
                       <div className="flex"><span className="w-24 font-bold">Position:</span> <span>{emp.positions?.title || '-'}</span></div>
                     </div>
@@ -96,6 +90,10 @@ export default async function PayslipsPrintPage({ params }: { params: Promise<{ 
                     <div>
                       <h3 className="font-bold border-b border-black mb-2 uppercase text-xs">Earnings</h3>
                       <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span>Basic Pay</span>
+                          <span>{Number(item.basic_pay).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                        </div>
                         {(item.payroll_earnings as any[])?.map((e, i) => (
                           <div key={i} className="flex justify-between">
                             <span>{e.description}</span>
@@ -123,7 +121,7 @@ export default async function PayslipsPrintPage({ params }: { params: Promise<{ 
                   <div className="mt-4 grid grid-cols-2 gap-8 pt-2 border-t-2 border-black absolute bottom-6 w-[calc(100%-3rem)]">
                     <div className="flex justify-between font-bold">
                       <span>Total Earnings:</span>
-                      <span>{Number(item.gross_pay).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+                      <span>{Number(item.basic_pay + ((item.payroll_earnings as any[])?.reduce((acc, curr) => acc + Number(curr.amount), 0) || 0)).toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
                     </div>
                     <div>
                       <div className="flex justify-between font-bold mb-2">

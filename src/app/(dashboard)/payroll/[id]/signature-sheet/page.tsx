@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowLeft, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PrintButton } from "@/components/ui/print-button"
+import { WordDownloadButton } from "@/components/ui/word-download-button"
 
 export default async function PayrollSignatureSheet({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -34,16 +35,12 @@ export default async function PayrollSignatureSheet({ params }: { params: Promis
       id,
       is_excluded,
       employee_id,
+      present_days,
+      absent_days,
       employees ( first_name, last_name, employee_code, departments(name) )
     `)
     .eq('payroll_run_id', id)
     .eq('is_excluded', false)
-    
-  // 3. Fetch Timesheets for present/absent days
-  const { data: timesheets } = await supabase
-    .from('timesheets')
-    .select('employee_id, calculated_present_days, calculated_absent_days')
-    .eq('payroll_period_id', payrollRun.payroll_period_id)
 
   const { data: company } = await supabase
     .from('company_settings')
@@ -51,11 +48,10 @@ export default async function PayrollSignatureSheet({ params }: { params: Promis
     .single()
 
   const activeItems = (items || []).map(item => {
-    const ts = timesheets?.find(t => t.employee_id === item.employee_id)
     return {
       ...item,
-      presentDays: ts?.calculated_present_days || 0,
-      absentDays: ts?.calculated_absent_days || 0
+      presentDays: item.present_days || 0,
+      absentDays: item.absent_days || 0
     }
   }).sort((a, b) => {
     const aName = ((a.employees as any)?.last_name || '').toLowerCase()
@@ -63,8 +59,22 @@ export default async function PayrollSignatureSheet({ params }: { params: Promis
     return aName.localeCompare(bName)
   })
 
+  const wordData = activeItems.map((item, index) => ({
+    "No": index + 1,
+    "Employee Code": (item.employees as any)?.employee_code,
+    "Name": `${(item.employees as any)?.last_name}, ${(item.employees as any)?.first_name}`,
+    "Days Present": item.presentDays,
+    "Days Absent": item.absentDays,
+  }))
+
   return (
     <div className="bg-slate-50 min-h-screen print:min-h-0 font-sans">
+      <style type="text/css" dangerouslySetInnerHTML={{__html: `
+        @media print {
+          @page { margin: 0; }
+          body { padding: 1.5cm; }
+        }
+      `}} />
       {/* Non-printable header */}
       <div className="print:hidden bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
         <div className="flex items-center gap-4">
@@ -82,7 +92,15 @@ export default async function PayrollSignatureSheet({ params }: { params: Promis
             </p>
           </div>
         </div>
-        <PrintButton />
+        <div className="flex gap-2">
+          <WordDownloadButton 
+            data={wordData} 
+            filename={`signature-sheet-${payrollRun.payroll_periods.period_start}.doc`}
+            companyName={company?.company_name || "Company Name"}
+            periodInfo={`${new Date(payrollRun.payroll_periods.period_start).toLocaleDateString()} to ${new Date(payrollRun.payroll_periods.period_end).toLocaleDateString()}`}
+          />
+          <PrintButton />
+        </div>
       </div>
 
       {/* Printable Sheet */}

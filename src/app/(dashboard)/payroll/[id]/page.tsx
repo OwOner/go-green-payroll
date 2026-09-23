@@ -55,6 +55,7 @@ export default async function PayrollRunDetailsPage({ params }: { params: Promis
       is_excluded,
       exclusion_reason,
       employees ( first_name, last_name, employee_code ),
+      payroll_earnings ( id, description, amount, source ),
       payroll_deductions ( id, description, amount, source )
     `)
     .eq('payroll_run_id', id)

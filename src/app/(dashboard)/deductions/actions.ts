@@ -80,3 +80,19 @@ export async function cancelDeduction(id: string) {
   revalidatePath('/deductions')
   return { success: true }
 }
+
+export async function deleteDeduction(id: string) {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('cash_advances')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/deductions')
+  return { success: true }
+}

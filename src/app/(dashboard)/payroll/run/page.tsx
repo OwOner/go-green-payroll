@@ -88,7 +88,12 @@ export default function RunPayrollPage() {
     setError(null)
     savePeriod()
 
-    const selectedPeriod = periods.find(p => `${p.start}_${p.end}` === selectedPeriodKey)
+    let selectedPeriod = periods.find(p => `${p.start}_${p.end}` === selectedPeriodKey)
+    if (!selectedPeriod && selectedPeriodKey && selectedPeriodKey.includes('_')) {
+      const [start, end] = selectedPeriodKey.split('_')
+      selectedPeriod = { start, end, payDate: end, timesheetsGenerated: true, timesheetsApproved: true, hasPayrollRun: false, statusText: "" }
+    }
+
     if (!selectedPeriod) {
       setError("Please select a valid payroll period.")
       setLoading(false)
@@ -120,8 +125,17 @@ export default function RunPayrollPage() {
     setLoading(true)
     setError(null)
 
-    const selectedPeriod = periods.find(p => `${p.start}_${p.end}` === selectedPeriodKey)
-    if (!selectedPeriod) return
+    let selectedPeriod = periods.find(p => `${p.start}_${p.end}` === selectedPeriodKey)
+    if (!selectedPeriod && selectedPeriodKey && selectedPeriodKey.includes('_')) {
+      const [start, end] = selectedPeriodKey.split('_')
+      selectedPeriod = { start, end, payDate: end, timesheetsGenerated: true, timesheetsApproved: true, hasPayrollRun: false, statusText: "" }
+    }
+    
+    if (!selectedPeriod) {
+      setError("Please select a valid payroll period.")
+      setLoading(false)
+      return
+    }
 
     const data = new FormData()
     data.set('period_start', selectedPeriod.start)
@@ -239,7 +253,7 @@ export default function RunPayrollPage() {
                     <th className="px-6 py-3 font-medium text-right">Gross Pay</th>
                     <th className="px-6 py-3 font-medium text-right">Deductions</th>
                     <th className="px-6 py-3 font-medium text-right text-emerald-600">Net Pay</th>
-                    <th className="px-6 py-3 font-medium text-center">Status</th>
+                    <th className="px-6 py-3 font-medium">Status</th>
                     <th className="px-6 py-3 font-medium text-center">Actions</th>
                   </tr>
                 </thead>
@@ -250,15 +264,15 @@ export default function RunPayrollPage() {
                       <td className="px-6 py-4 text-right">{row.gross_pay !== null ? row.gross_pay.toLocaleString(undefined, {minimumFractionDigits: 2}) : '—'}</td>
                       <td className="px-6 py-4 text-right text-red-600">{row.total_deductions !== null ? (row.total_deductions > 0 ? `-${row.total_deductions.toLocaleString(undefined, {minimumFractionDigits: 2})}` : '0.00') : '—'}</td>
                       <td className="px-6 py-4 text-right font-bold text-emerald-600">{row.net_pay !== null ? row.net_pay.toLocaleString(undefined, {minimumFractionDigits: 2}) : '—'}</td>
-                      <td className="px-6 py-4 text-center text-slate-500">
+                      <td className="px-6 py-4 text-slate-500">
                         {row.status === 'Ready' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Ready</span>
+                          <span className="inline-flex items-center pl-2 py-0.5 border-l-2 border-[#1F7A4D] text-xs font-medium text-slate-700">Ready</span>
                         ) : row.status.startsWith('Warning') ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-amber-100 text-amber-800 max-w-xs text-left">
+                          <span className="inline-flex items-center pl-2 py-0.5 border-l-2 border-[#B7791F] text-xs font-medium text-slate-700 max-w-xs text-left">
                             {row.status}
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-red-100 text-red-800 max-w-xs text-left">
+                          <span className="inline-flex items-center pl-2 py-0.5 border-l-2 border-red-600 text-xs font-medium text-slate-700 max-w-xs text-left">
                             {row.status}
                           </span>
                         )}

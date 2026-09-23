@@ -60,15 +60,17 @@ export async function previewPayrollRun(formData: FormData) {
     return { error: `Failed to resolve payroll period: ${err.message}` };
   }
 
-  // Check for duplicate runs
+  // Check for duplicate runs (ignore Rejected or Cancelled)
   const { data: existingRun } = await supabase
     .from('payroll_runs')
-    .select('id')
+    .select('id, status')
     .eq('payroll_period_id', periodId)
+    .neq('status', 'Rejected')
+    .neq('status', 'Cancelled')
     .limit(1)
     
   if (existingRun && existingRun.length > 0) {
-    return { error: "A payroll run for this exact period and frequency already exists." }
+    return { error: "An active payroll run for this exact period and frequency already exists." }
   }
 
   // Find active employees

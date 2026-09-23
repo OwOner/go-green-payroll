@@ -15,10 +15,7 @@ export default async function PayslipPage({ params }: { params: Promise<{ id: st
     .from('payroll_items')
     .select(`
       id,
-      gross_pay,
-      taxable_income,
-      non_taxable_income,
-      withholding_tax,
+      basic_pay,
       total_deductions,
       net_pay,
       employee_id,
@@ -129,8 +126,8 @@ export default async function PayslipPage({ params }: { params: Promise<{ id: st
               ))}
             </div>
             <div className="flex justify-between font-bold text-slate-900 mt-6 pt-4 border-t border-slate-200">
-              <span>Gross Pay</span>
-              <span>₱{item.gross_pay.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
+              <span>Basic Pay</span>
+              <span>₱{item.basic_pay.toLocaleString(undefined, {minimumFractionDigits: 2})}</span>
             </div>
           </div>
 

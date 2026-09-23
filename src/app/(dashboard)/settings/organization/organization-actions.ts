@@ -58,8 +58,7 @@ export async function getPositions() {
     .from('positions')
     .select(`
       *,
-      departments(name),
-      work_policies(name)
+      departments(name)
     `)
     .eq('is_active', true)
     .order('title')
@@ -68,7 +67,7 @@ export async function getPositions() {
   return { positions: data || [] }
 }
 
-export async function upsertPosition(id: string | null, payload: { title: string, description: string, department_id: string | null, default_work_policy_id: string | null }) {
+export async function upsertPosition(id: string | null, payload: { title: string, description: string, department_id: string | null }) {
   const supabase = await createClient()
 
   let error;

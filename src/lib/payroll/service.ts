@@ -160,7 +160,6 @@ export async function loadPayrollContext(
     .select('*')
     .eq('employee_id', employeeId)
     .in('status', ['Active', 'Partially Paid'])
-    .lte('date', periodData.period_end);
 
   const cashAdvances = cashAdvancesData?.map((ca: any) => ({
     id: ca.id,

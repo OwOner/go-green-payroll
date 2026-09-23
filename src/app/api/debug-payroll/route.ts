@@ -10,17 +10,12 @@ export async function GET(request: Request) {
     const freq = "Weekly";
 
     const ctx = await loadPayrollContext(empId, start, end, freq as any);
-    const res = calculatePayroll(ctx, ctx.activePolicy as any);
+    const res = calculatePayroll(ctx);
 
     return NextResponse.json({
       success: true,
-      gross_pay: res.gross_pay,
-      policy: ctx.activePolicy?.name,
-      timesheet_details: ctx.timesheet.details?.map(d => ({
-        date: d.date,
-        day_type: d.day_type,
-        regular_hours: d.regular_hours
-      })),
+      gross_pay: res.basic_pay,
+      policy: null,
       history: ctx.employee.history,
       earnings: res.earnings
     });

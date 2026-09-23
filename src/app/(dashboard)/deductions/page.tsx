@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
-import { getDeductions, createDeduction, cancelDeduction } from "./actions"
+import { getDeductions, createDeduction, cancelDeduction, deleteDeduction } from "./actions"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, XCircle, AlertCircle, Search, ChevronDown } from "lucide-react"
+import { Plus, XCircle, AlertCircle, Search, ChevronDown, Trash2 } from "lucide-react"
 
 export default function DeductionsPage() {
   const [deductions, setDeductions] = useState<any[]>([])
@@ -64,6 +64,15 @@ export default function DeductionsPage() {
   async function handleCancel(id: string) {
     if (!confirm("Are you sure you want to cancel this deduction?")) return
     const res = await cancelDeduction(id)
+    if (!res.error) {
+      const data = await getDeductions()
+      setDeductions(data)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm("Are you sure you want to completely delete this deduction? This action cannot be undone.")) return
+    const res = await deleteDeduction(id)
     if (!res.error) {
       const data = await getDeductions()
       setDeductions(data)
@@ -210,12 +219,17 @@ export default function DeductionsPage() {
                         {d.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      {(d.status === 'Active' || d.status === 'Partially Paid') && (
-                        <button onClick={() => handleCancel(d.id)} className="text-red-500 hover:text-red-700 transition-colors inline-flex items-center gap-1 text-xs font-medium">
-                          <XCircle className="w-4 h-4" /> Cancel
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-3">
+                        {(d.status === 'Active' || d.status === 'Partially Paid') && (
+                          <button onClick={() => handleCancel(d.id)} className="text-amber-600 hover:text-amber-800 transition-colors inline-flex items-center gap-1 text-xs font-medium" title="Cancel Deduction">
+                            <XCircle className="w-4 h-4" /> Cancel
+                          </button>
+                        )}
+                        <button onClick={() => handleDelete(d.id)} className="text-slate-400 hover:text-red-600 transition-colors inline-flex items-center gap-1 text-xs font-medium" title="Delete Deduction">
+                          <Trash2 className="w-4 h-4" /> Delete
                         </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}

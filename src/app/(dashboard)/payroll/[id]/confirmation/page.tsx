@@ -112,7 +112,7 @@ export default async function PayrollConfirmationSheet({ params }: { params: Pro
                   <td className="border border-slate-300 px-4 py-4 font-medium text-slate-900">
                     {(item.employees as any)?.last_name}, {(item.employees as any)?.first_name}
                   </td>
-                  <td className="border border-slate-300 px-4 py-4 text-slate-600">
+                  <td className="border border-slate-300 px-4 py-4 text-slate-600 font-mono">
                     {(item.employees as any)?.employee_code}
                   </td>
                   <td className="border border-slate-300 px-4 py-4 text-center text-slate-700">

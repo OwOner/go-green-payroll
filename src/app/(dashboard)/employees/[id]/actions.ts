@@ -16,39 +16,20 @@ export async function addCompensationHistory(formData: FormData) {
     return { error: "Missing required fields" }
   }
 
-  if (!['Monthly', 'Daily', 'Weekly', 'Hourly'].includes(salary_basis)) {
-    return { error: `Invalid salary basis: "${salary_basis}". Must be Monthly, Daily, Weekly, or Hourly.` }
+  if (!['Monthly', 'Daily'].includes(salary_basis)) {
+    return { error: `Invalid salary basis: "${salary_basis}". Must be Monthly or Daily.` }
   }
 
-  // Store only the authoritative rate column for the chosen basis.
-  // The payroll engine derives hourly/daily equivalents using the resolved Work Policy.
-  // We do NOT hardcode divisors like 261 here — that's policy-dependent.
   const rateColumns: Record<string, object> = {
     Monthly: {
-      basic_salary: rate,
-      daily_rate: null,
-      weekly_rate: null,
-      hourly_rate: null,
+      rate_type: 'Monthly',
+      amount: rate
     },
     Daily: {
-      basic_salary: rate,   // stored here too so NOT NULL constraint is satisfied
-      daily_rate: rate,
-      weekly_rate: null,
-      hourly_rate: null,
-    },
-    Weekly: {
-      basic_salary: rate,   // stored here too so NOT NULL constraint is satisfied
-      daily_rate: null,
-      weekly_rate: rate,
-      hourly_rate: null,
-    },
-    Hourly: {
-      basic_salary: rate,   // stored here too so NOT NULL constraint is satisfied
-      daily_rate: null,
-      weekly_rate: null,
-      hourly_rate: rate,
-    },
-  }
+      rate_type: 'Daily',
+      amount: rate
+    }
+  };
 
   // First, get the most recent compensation to check dates
   const { data: previousComps, error: fetchError } = await supabase
@@ -67,8 +48,28 @@ export async function addCompensationHistory(formData: FormData) {
     const newDate = new Date(effective_from);
     const oldDate = new Date(mostRecent.effective_from);
 
-    if (newDate <= oldDate) {
-      return { error: "New effective date must be strictly after the most recent compensation's effective date." }
+    if (newDate < oldDate) {
+      return { error: "New effective date cannot be before the most recent compensation's effective date." }
+    }
+
+    if (newDate.getTime() === oldDate.getTime()) {
+      // Update the existing record instead of creating a new one and capping
+      const { error: updateSameDayError } = await supabase
+        .from('employee_compensation_history')
+        .update({
+          salary_basis,
+          salary_type: salary_basis,
+          pay_frequency,
+          ...rateColumns[salary_basis]
+        })
+        .eq('id', mostRecent.id)
+
+      if (updateSameDayError) {
+        return { error: "Failed to update today's compensation record." }
+      }
+      
+      revalidatePath(`/employees/${employee_id}`)
+      return { success: true }
     }
 
     // Cap the previous record

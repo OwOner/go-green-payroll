@@ -9,13 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Plus, Loader2, Info } from "lucide-react"
 import { addCompensationHistory } from "./actions"
 
-type SalaryBasis = "Monthly" | "Daily" | "Weekly" | "Hourly"
+type SalaryBasis = "Monthly" | "Daily"
 
 const BASIS_LABELS: Record<SalaryBasis, { unit: string; question: string; hint: string }> = {
   Monthly:  { unit: "/ month",  question: "Monthly salary (fixed amount per month)",    hint: "e.g. ₱20,000/month for an office employee" },
   Daily:    { unit: "/ day",    question: "Daily rate (amount per day worked)",          hint: "e.g. ₱600/day for a construction worker" },
-  Weekly:   { unit: "/ week",   question: "Weekly rate (fixed amount per week)",         hint: "e.g. ₱3,000/week" },
-  Hourly:   { unit: "/ hour",   question: "Hourly rate (amount per hour worked)",        hint: "e.g. ₱100/hour for part-time or contractual" },
 }
 
 export function UpdateCompensationDialog({ employeeId }: { employeeId: string }) {
@@ -55,7 +53,7 @@ export function UpdateCompensationDialog({ employeeId }: { employeeId: string })
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={
-        <Button size="sm">
+        <Button size="sm" variant="outline" className="border-border text-ink hover:border-accent bg-card font-medium tabular-nums">
           <Plus className="mr-2 h-4 w-4" />
           Update Salary
         </Button>
@@ -93,8 +91,6 @@ export function UpdateCompensationDialog({ employeeId }: { employeeId: string })
                 <SelectContent>
                   <SelectItem value="Monthly">Monthly — fixed amount per month</SelectItem>
                   <SelectItem value="Daily">Daily — amount per day worked</SelectItem>
-                  <SelectItem value="Weekly">Weekly — fixed amount per week</SelectItem>
-                  <SelectItem value="Hourly">Hourly — amount per hour worked</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-slate-500 flex gap-1 items-start">

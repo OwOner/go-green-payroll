@@ -24,7 +24,7 @@ export default async function HistoryPage() {
     .from('payroll_items')
     .select(`
       id,
-      gross_pay,
+      basic_pay,
       net_pay,
       payroll_runs!inner (
         status,

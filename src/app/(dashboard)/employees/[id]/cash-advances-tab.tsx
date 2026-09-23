@@ -92,9 +92,7 @@ export function CashAdvancesTab({ employeeId, cashAdvances = [] }: { employeeId:
         </div>
         
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4 mr-2"/> Add Cash Advance</Button>
-          </DialogTrigger>
+          <DialogTrigger render={<Button><Plus className="h-4 w-4 mr-2"/> Add Cash Advance</Button>} />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>New Cash Advance</DialogTitle>

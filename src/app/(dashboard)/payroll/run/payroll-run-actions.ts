@@ -136,12 +136,14 @@ export async function getPayrollPeriodStatuses(frequency: string): Promise<Perio
   if (periodIds.length > 0) {
     const { data: runs } = await supabase
       .from('payroll_runs')
-      .select('payroll_period_id')
+      .select('payroll_period_id, status')
       .in('payroll_period_id', periodIds)
       
     if (runs) {
       runs.forEach(run => {
-        payrollRuns[run.payroll_period_id] = true
+        if (run.status !== 'Rejected' && run.status !== 'Cancelled') {
+          payrollRuns[run.payroll_period_id] = true
+        }
       })
     }
   }
