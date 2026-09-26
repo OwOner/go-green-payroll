@@ -84,7 +84,7 @@ export async function overridePayrollEarning(
     0
   )
 
-  const newNetPay = newGrossPay - totalDeductions
+  const newNetPay = Math.max(0, newGrossPay - totalDeductions)
 
   const { error: itemUpdateErr } = await supabase
     .from("payroll_items")
@@ -156,7 +156,7 @@ export async function revertPayrollEarningOverride(earningId: string, payrollRun
 
   await supabase
     .from("payroll_items")
-    .update({ net_pay: newGrossPay - totalDeductions })
+    .update({ net_pay: Math.max(0, newGrossPay - totalDeductions) })
     .eq("id", earning.payroll_item_id)
 
   revalidatePath(`/payroll/${payrollRunId}`)
@@ -211,7 +211,7 @@ export async function addRunDeduction(
     .from("payroll_items")
     .update({ 
       total_deductions: totalDeductions, 
-      net_pay: newGrossPay - totalDeductions 
+      net_pay: Math.max(0, newGrossPay - totalDeductions) 
     })
     .eq("id", payrollItemId)
 
@@ -266,7 +266,7 @@ export async function addRunBonus(
   await supabase
     .from("payroll_items")
     .update({ 
-      net_pay: newGrossPay - totalDeductions 
+      net_pay: Math.max(0, newGrossPay - totalDeductions) 
     })
     .eq("id", payrollItemId)
 
@@ -315,7 +315,7 @@ export async function removeRunDeduction(
     .from("payroll_items")
     .update({ 
       total_deductions: totalDeductions, 
-      net_pay: newGrossPay - totalDeductions 
+      net_pay: Math.max(0, newGrossPay - totalDeductions) 
     })
     .eq("id", payrollItemId)
 

@@ -26,7 +26,7 @@ function getWeeklyPeriods(count: number): any[] {
   let currentMonday = new Date(today)
   const day = currentMonday.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
   const diff = day === 0 ? -6 : 1 - day
-  currentMonday.setDate(today.getDate() + diff - 7) // previous Monday
+  currentMonday.setDate(today.getDate() + diff) // Current Monday
 
   for (let i = 0; i < count; i++) {
     const start = new Date(currentMonday)
@@ -41,11 +41,11 @@ function getWeeklyPeriods(count: number): any[] {
 function getSemiMonthlyPeriods(count: number): any[] {
   const periods = []
   let current = new Date()
-  // Move to previous half month
+  // Include current half month
   if (current.getDate() > 15) {
-    current = new Date(current.getFullYear(), current.getMonth(), 1)
+    current = new Date(current.getFullYear(), current.getMonth(), 16)
   } else {
-    current = new Date(current.getFullYear(), current.getMonth() - 1, 16)
+    current = new Date(current.getFullYear(), current.getMonth(), 1)
   }
 
   for (let i = 0; i < count; i++) {
@@ -72,7 +72,7 @@ function getSemiMonthlyPeriods(count: number): any[] {
 function getMonthlyPeriods(count: number): any[] {
   const periods = []
   let current = new Date()
-  current = new Date(current.getFullYear(), current.getMonth() - 1, 1)
+  current = new Date(current.getFullYear(), current.getMonth(), 1) // Current month
 
   for (let i = 0; i < count; i++) {
     const start = new Date(current)
@@ -87,7 +87,7 @@ function getMonthlyPeriods(count: number): any[] {
 function getDailyPeriods(count: number): any[] {
   const periods = []
   let current = new Date()
-  current.setDate(current.getDate() - 1)
+  // Start from today
 
   for (let i = 0; i < count; i++) {
     const start = new Date(current)

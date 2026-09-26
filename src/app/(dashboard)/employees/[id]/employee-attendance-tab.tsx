@@ -90,45 +90,27 @@ export function EmployeeAttendanceTab({ employee }: EmployeeAttendanceTabProps) 
           ) : (
             <Table>
               <TableHeader className="bg-slate-50">
-                <TableRow>
+                                <TableRow>
                   <TableHead className="pl-6">Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Time In</TableHead>
-                  <TableHead>Time Out</TableHead>
-                  <TableHead>Regular</TableHead>
-                  <TableHead>OT</TableHead>
-                  <TableHead>UT</TableHead>
-                  <TableHead>Project</TableHead>
+                  <TableHead>Notes</TableHead>
                   <TableHead className="text-right pr-6"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {records.length > 0 ? (
                   records.map((record) => (
-                    <TableRow key={record.id} className="hover:bg-slate-50">
+                                        <TableRow key={record.id} className="hover:bg-slate-50">
                       <TableCell className="pl-6 font-medium text-slate-900">
-                        {new Date(record.work_date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        {new Date(record.work_date + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={getStatusColor(record.status)}>
                           {record.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">
-                        {record.time_in ? new Date(record.time_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                      </TableCell>
-                      <TableCell className="text-slate-600">
-                        {record.time_out ? new Date(record.time_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                      </TableCell>
-                      <TableCell className="text-slate-600">{record.regular_hours || '-'}</TableCell>
-                      <TableCell className="text-slate-600">{record.overtime_hours || '-'}</TableCell>
-                      <TableCell className="text-slate-600">
-                        {record.internal_notes && record.internal_notes.includes('Undertime: ') 
-                           ? record.internal_notes.match(/Undertime: (\d+(\.\d+)?)/)?.[1] || '-' 
-                           : '-'}
-                      </TableCell>
-                      <TableCell className="text-slate-600 truncate max-w-[150px]">
-                        {record.projects?.project_name || '-'}
+                      <TableCell className="text-slate-600 truncate max-w-[200px]">
+                        {record.internal_notes || '-'}
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <Button variant="ghost" size="sm" onClick={() => handleEditRecord(record)}>

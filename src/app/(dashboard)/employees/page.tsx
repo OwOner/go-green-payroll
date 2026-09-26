@@ -71,7 +71,7 @@ export default async function EmployeesPage() {
                 employees.map((emp) => (
                   <TableRow key={emp.id}>
                     <TableCell>
-                      <div className="font-medium">{emp.last_name}, {emp.first_name} {emp.middle_name?.charAt(0)}.</div>
+                      <div className="font-medium">{emp.last_name}, {emp.first_name}{emp.middle_name ? ` ${emp.middle_name.charAt(0)}.` : ''}</div>
                       <div className="text-xs text-muted-foreground">{emp.email}</div>
                     </TableCell>
                     <TableCell>{emp.employee_code}</TableCell>

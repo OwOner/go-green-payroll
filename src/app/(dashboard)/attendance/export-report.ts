@@ -4,9 +4,10 @@ import { format, parseISO, eachDayOfInterval } from 'date-fns';
 export async function generateExcelReport(
   startDate: string,
   endDate: string,
-  employees: any[],
+  rawEmployees: any[],
   records: any[]
 ) {
+  const employees = [...rawEmployees].sort((a,b) => (a.last_name || '').localeCompare(b.last_name || ''));
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Nexus Payroll System';
   workbook.lastModifiedBy = 'Nexus';
@@ -206,12 +207,11 @@ export async function generateExcelReport(
   // Flatten records including missing ones
   const dailyRows: any[] = [];
   
-  // Sort employees
-  const sortedEmployees = [...employees].sort((a,b) => (a.last_name || '').localeCompare(b.last_name || ''));
+  // Employees are already sorted alphabetically
   
   days.forEach(d => {
     const dateStr = format(d, 'yyyy-MM-dd');
-    sortedEmployees.forEach(emp => {
+    employees.forEach(emp => {
       const record = records.find(r => r.employee_id === emp.id && r.work_date === dateStr);
       if (record) {
         let sourceLabel = (record.last_modified_source || record.source || '').replace(/_/g, ' ');
@@ -300,7 +300,7 @@ export async function generateExcelReport(
   empSheet.getCell(`A${currentRow}`).font = { bold: true, size: 14 };
   currentRow += 2;
 
-  sortedEmployees.forEach(emp => {
+  employees.forEach(emp => {
     empSheet.getCell(`A${currentRow}`).value = `${emp.last_name}, ${emp.first_name}`;
     empSheet.getCell(`A${currentRow}`).font = { bold: true, size: 12 };
     currentRow++;

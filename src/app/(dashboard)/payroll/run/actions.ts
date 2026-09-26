@@ -169,6 +169,19 @@ export async function submitPayrollRun(formData: FormData, status: 'Draft' | 'Pe
     return { error: `Failed to resolve payroll period: ${err.message}` };
   }
 
+  // Guard: Check for duplicate active runs for this period
+  const { data: existingRun } = await supabase
+    .from('payroll_runs')
+    .select('id, status')
+    .eq('payroll_period_id', period.id)
+    .neq('status', 'Rejected')
+    .neq('status', 'Cancelled')
+    .limit(1)
+
+  if (existingRun && existingRun.length > 0) {
+    return { error: "An active payroll run for this exact period and frequency already exists." }
+  }
+
   // 2. Create Run
   const { data: run, error: rErr } = await supabase
     .from('payroll_runs')

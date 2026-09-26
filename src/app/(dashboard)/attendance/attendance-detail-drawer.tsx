@@ -44,12 +44,7 @@ export default function AttendanceDetailDrawer({ open, onOpenChange, emp, date, 
       employee_id: emp.id,
       work_date: date,
       status,
-      remarks,
-      // Clear out unused fields if we are overwriting
-      time_in: null,
-      time_out: null,
-      overtime_hours: 0,
-      internal_notes: null
+      internal_notes: remarks || null
     }
 
     const res = await updateAttendanceRecord(record?.id || null, payload, reason)

@@ -193,7 +193,8 @@ function buildHorizontalGridSheet(workbook: ExcelJS.Workbook, title: string, per
   }
 }
 
-export async function generateWeeklyExcelTemplate(weekStartDate: Date, employees: any[]) {
+export async function generateWeeklyExcelTemplate(weekStartDate: Date, rawEmployees: any[]) {
+  const employees = [...rawEmployees].sort((a,b) => (a.last_name || '').localeCompare(b.last_name || ''));
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Nexus Payroll System';
   
@@ -214,7 +215,8 @@ export async function generateWeeklyExcelTemplate(weekStartDate: Date, employees
   return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
-export async function generateSemiMonthlyExcelTemplate(periodStart: Date, periodEnd: Date, employees: any[]) {
+export async function generateSemiMonthlyExcelTemplate(periodStart: Date, periodEnd: Date, rawEmployees: any[]) {
+  const employees = [...rawEmployees].sort((a,b) => (a.last_name || '').localeCompare(b.last_name || ''));
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Nexus Payroll System';
   
@@ -235,7 +237,8 @@ export async function generateSemiMonthlyExcelTemplate(periodStart: Date, period
   return new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
 
-export async function generateMonthlyExcelTemplate(year: number, month: number, employees: any[]) {
+export async function generateMonthlyExcelTemplate(year: number, month: number, rawEmployees: any[]) {
+  const employees = [...rawEmployees].sort((a,b) => (a.last_name || '').localeCompare(b.last_name || ''));
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Nexus Payroll System';
   

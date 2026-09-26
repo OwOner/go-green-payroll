@@ -12,8 +12,12 @@ export async function addCompensationHistory(formData: FormData) {
   const pay_frequency = formData.get("pay_frequency") as string
   const effective_from = formData.get("effective_from") as string
 
-  if (!employee_id || !salary_basis || !rate || !pay_frequency || !effective_from) {
+  if (!employee_id || !salary_basis || !pay_frequency || !effective_from) {
     return { error: "Missing required fields" }
+  }
+
+  if (isNaN(rate) || rate <= 0) {
+    return { error: "Rate must be a positive number." }
   }
 
   if (!['Monthly', 'Daily'].includes(salary_basis)) {
@@ -111,7 +115,7 @@ export async function fetchEmployeeAttendance(employeeId: string, startDate: str
   
   const { data: records, error } = await supabase
     .from('attendance_records')
-    .select('*, projects(project_name)')
+    .select('*')
     .eq('employee_id', employeeId)
     .gte('work_date', startDate)
     .lte('work_date', endDate)

@@ -66,17 +66,10 @@ export async function importAttendanceBatch(rows: ValidatedAttendanceRow[], batc
     employee_id: row.employee_id,
     project_id: row.project_id || null,
     work_date: row.work_date,
-    time_in: row.time_in,
-    time_out: row.time_out,
     status: row.status,
     internal_notes: row.internal_notes || null,
     source: 'excel_import',
-    import_batch_id: batchId,
-    // Provide sensible defaults for required fields in case engine expects them
-    regular_hours: 0,
-    overtime_hours: 0,
-    night_differential_hours: 0,
-    is_rest_day: false
+    import_batch_id: batchId
   }))
 
   const { error } = await supabase

@@ -403,15 +403,15 @@ export default function RunPayrollPage() {
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex justify-end gap-12">
               <div className="text-right">
                 <p className="text-xs text-slate-500 uppercase tracking-wide">Total Gross</p>
-                <p className="text-lg font-bold text-slate-900">₱{preview.reduce((s, r) => s + r.gross_pay, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                <p className="text-lg font-bold text-slate-900">₱{preview.filter(r => r.gross_pay !== null).reduce((s, r) => s + r.gross_pay, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-slate-500 uppercase tracking-wide">Total Deductions</p>
-                <p className="text-lg font-bold text-red-600">-₱{preview.reduce((s, r) => s + r.total_deductions, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                <p className="text-lg font-bold text-red-600">-₱{preview.filter(r => r.total_deductions !== null).reduce((s, r) => s + r.total_deductions, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-slate-500 uppercase tracking-wide">Total Net Pay</p>
-                <p className="text-lg font-bold text-emerald-600">₱{preview.reduce((s, r) => s + r.net_pay, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
+                <p className="text-lg font-bold text-emerald-600">₱{preview.filter(r => r.net_pay !== null).reduce((s, r) => s + r.net_pay, 0).toLocaleString(undefined, {minimumFractionDigits: 2})}</p>
               </div>
             </div>
           </Card>

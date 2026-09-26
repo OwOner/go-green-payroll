@@ -56,7 +56,7 @@ export async function validateExcelBatch(parsedRows: ParsedAttendanceRow[]): Pro
   if (matchedEmpIds.length > 0 && uniqueDates.length > 0) {
     const { data } = await supabase
       .from("attendance_records")
-      .select("id, employee_id, work_date, status, source, overtime_hours")
+      .select("id, employee_id, work_date, status, source")
       .in("employee_id", matchedEmpIds)
       .in("work_date", uniqueDates)
       
@@ -132,13 +132,11 @@ export async function validateExcelBatch(parsedRows: ParsedAttendanceRow[]): Pro
       result.existing_id = existing.id
       result.existing_status = existing.status
       result.existing_source = existing.source
-      result.existing_ot = existing.overtime_hours
 
       // Check if literally anything changed
       const isStatusIdentical = existing.status === statusFull
-      const isOtIdentical = (existing.overtime_hours || 0) === (row.ot_hours || 0)
       
-      if (isStatusIdentical && isOtIdentical) {
+      if (isStatusIdentical) {
         result.action = 'Duplicate'
         result.reason = 'Identical record already exists'
         result.skip = true 
@@ -191,8 +189,6 @@ export async function commitExcelBatch(validatedRows: ExcelValidationResult[], b
         updates.push({
           id: row.existing_id,
           status: row.status_full,
-          regular_hours: ['Present', 'Work From Home', 'Holiday'].includes(row.status_full as string) ? 8 : 0,
-          overtime_hours: row.ot_hours || 0,
           internal_notes: notes,
           last_modified_source: 'excel',
           last_modified_by: user.id,
@@ -206,11 +202,7 @@ export async function commitExcelBatch(validatedRows: ExcelValidationResult[], b
         status: row.status_full,
         source: 'excel',
         import_batch_id: batchId,
-        regular_hours: ['Present', 'Work From Home', 'Holiday'].includes(row.status_full as string) ? 8 : 0,
-        overtime_hours: row.ot_hours || 0,
-        internal_notes: notes,
-        night_differential_hours: 0,
-        is_rest_day: row.status_full === 'Rest Day'
+        internal_notes: notes
       })
     }
   }

@@ -109,7 +109,10 @@ export default async function PayrollDashboardPage() {
               {runs?.map((run: any) => (
                 <tr key={run.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-medium text-slate-900">
-                    {new Date(run.payroll_periods.period_start).toLocaleDateString()} - {new Date(run.payroll_periods.period_end).toLocaleDateString()}
+                    {(() => {
+                      const fmtDate = (s: string) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m-1, d).toLocaleDateString() }
+                      return `${fmtDate(run.payroll_periods.period_start)} - ${fmtDate(run.payroll_periods.period_end)}`
+                    })()}
                   </td>
                   <td className="px-6 py-4 text-slate-500">
                     {run.payroll_periods.pay_frequency}

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient, authorizeModule } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { AlertCircle, CheckCircle, Clock, XCircle, ChevronRight } from "lucide-react"
@@ -6,7 +6,15 @@ import Link from "next/link"
 import PayrollActions from "./actions-client"
 import PayrollItemsTable from "./payroll-items-table"
 
+// Parse YYYY-MM-DD date strings without UTC timezone shift
+function fmtDate(dateStr: string) {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString()
+}
+
 export default async function PayrollRunDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  await authorizeModule('payroll')
   const { id } = await params
   const supabase = await createClient()
 
@@ -87,7 +95,7 @@ export default async function PayrollRunDetailsPage({ params }: { params: Promis
           </div>
           <div>
             <h2 className="text-3xl font-bold text-slate-900 tracking-tight">
-              Payroll: {new Date(payrollRun.payroll_periods.period_start).toLocaleDateString()} - {new Date(payrollRun.payroll_periods.period_end).toLocaleDateString()}
+              Payroll: {fmtDate(payrollRun.payroll_periods.period_start)} - {fmtDate(payrollRun.payroll_periods.period_end)}
             </h2>
             <div className="flex items-center gap-2 text-slate-500 mt-1 font-medium">
               <span>{payrollRun.payroll_periods.pay_frequency}</span>

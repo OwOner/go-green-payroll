@@ -17,19 +17,23 @@ export async function approvePayrollRun(payrollRunId: string, overrideReason?: s
   if (itemsErr) return { error: itemsErr.message }
 
   for (const item of runItems || []) {
-    const sumEarnings = item.payroll_earnings.reduce((sum: number, e: any) => sum + Number(e.amount), 0)
+    // sumEarnings only counts supplemental earnings (bonuses), NOT basic_pay.
+    // basic_pay is stored as its own column and is the primary earning.
+    const sumBonusEarnings = item.payroll_earnings.reduce((sum: number, e: any) => sum + Number(e.amount), 0)
     const sumDeductions = item.payroll_deductions.reduce((sum: number, d: any) => sum + Number(d.amount), 0)
     
-    const expectedGross = Number(item.basic_pay) + sumEarnings;
+    // Total gross = basic pay + any bonus earnings
+    const expectedGross = Number(item.basic_pay) + sumBonusEarnings;
     
     // Check if total deductions matches sum of deduction records
     if (Math.abs(Number(item.total_deductions) - sumDeductions) > 0.05) {
       return { error: `Reconciliation failed: Total deductions ${item.total_deductions} does not match sum of deduction items ${sumDeductions} for item ${item.id}.` }
     }
     
-    // Check if net pay matches expected gross - total deductions
-    if (Math.abs(expectedGross - Number(item.total_deductions) - Number(item.net_pay)) > 0.05) {
-      return { error: `Reconciliation failed: Net pay calculation mismatch for item ${item.id}.` }
+    // Check if net pay matches expected gross - total deductions (floored at 0)
+    const expectedNet = Math.max(0, expectedGross - Number(item.total_deductions));
+    if (Math.abs(expectedNet - Number(item.net_pay)) > 0.05) {
+      return { error: `Reconciliation failed: Net pay calculation mismatch for item ${item.id}. Expected ₱${expectedNet.toFixed(2)}, got ₱${Number(item.net_pay).toFixed(2)}.` }
     }
   }
 
@@ -152,7 +156,8 @@ export async function markPayrollPaid(payrollRunId: string, paymentReference?: s
   // 1. Fetch current status to ensure we don't process multiple times
   const { data: runData } = await supabase.from('payroll_runs').select('status').eq('id', payrollRunId).single()
   if (!runData) return { error: 'Run not found' }
-  if (runData.status === 'Paid') return { success: true } // Already paid
+  if (runData.status === 'Paid') return { success: true } // Already paid, idempotent
+  if (runData.status !== 'Approved') return { error: `Cannot mark as paid: payroll run is in '${runData.status}' status. Only 'Approved' runs can be marked as paid.` }
 
   // 2. Process Cash Advances
   // Find all cash advance deductions for this run

@@ -34,13 +34,11 @@ export default function AttendanceImportModal({ open, onOpenChange, employees, o
   const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
   const [previewRows, setPreviewRows] = useState<PreviewRow[]>([])
+  const [isDragging, setIsDragging] = useState(false)
   
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
+  const processFile = (file: File) => {
     setLoading(true)
     const reader = new FileReader()
     reader.onload = async (evt) => {
@@ -87,6 +85,30 @@ export default function AttendanceImportModal({ open, onOpenChange, employees, o
       }
     }
     reader.readAsBinaryString(file)
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    processFile(file)
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const file = e.dataTransfer.files?.[0]
+    if (!file) return
+    processFile(file)
   }
 
   const processRows = async (data: any[]) => {
@@ -286,7 +308,12 @@ export default function AttendanceImportModal({ open, onOpenChange, employees, o
         </DialogHeader>
 
         {step === 1 ? (
-          <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-slate-200 rounded-lg bg-slate-50">
+          <div 
+            className={`flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-lg transition-colors ${isDragging ? 'bg-primary/5 border-primary' : 'border-slate-200 bg-slate-50'}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <FileUp className="w-12 h-12 text-slate-400 mb-4" />
             <h3 className="text-lg font-medium text-slate-900 mb-1">Select Excel File</h3>
             <p className="text-sm text-slate-500 mb-6 text-center max-w-sm">
